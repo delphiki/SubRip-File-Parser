@@ -162,9 +162,9 @@ class srtFileEntry{
 	private function genStrippedText(){
 		$this->stripTags(true);
 		
-		$patterns = array("/(\r\n|\n|\r)/");
-		$repl = array(" ");
-		$this->strippedText = preg_replace($patterns, $repl, $this->noTagText);
+		$pattern = "/(\r\n|\n|\r)/";
+		$repl = " ";
+		$this->strippedText = preg_replace($pattern, $repl, $this->noTagText);
 	}
 	
 	/**
@@ -179,8 +179,8 @@ class srtFileEntry{
 		else
 			$this->noTagText = $this->text;
 
-		$patterns = array("/{[^}]+}/");
-		$repl = array("");
+		$patterns = "/{[^}]+}/";
+		$repl = "";
 		$this->noTagText = preg_replace($patterns, $repl, $this->noTagText);
 
 		foreach($replacements as $key => $replacement){
@@ -227,9 +227,9 @@ class srtFileEntry{
 		$tc_h = intval($x % 24);
 	
 		$timecode = str_pad($tc_h, 2, '0', STR_PAD_LEFT).':'
-							.str_pad($tc_m, 2, '0', STR_PAD_LEFT).':'
-							.str_pad($tc_s, 2, '0', STR_PAD_LEFT).','
-							.str_pad($tc_ms, 3, '0', STR_PAD_LEFT);		
+			.str_pad($tc_m, 2, '0', STR_PAD_LEFT).':'
+			.str_pad($tc_s, 2, '0', STR_PAD_LEFT).','
+			.str_pad($tc_ms, 3, '0', STR_PAD_LEFT);		
 		return $timecode;
 	}
 		
@@ -251,7 +251,7 @@ class srtFileEntry{
 	}
 	
 	/**
-	 * @description Computes Reading Speed (based on VisualSubSybc algorithm)
+	 * @description Computes Reading Speed (based on VisualSubSync algorithm)
 	 */
 	private function calcRS(){
 		if($this->durationMS < 500)
@@ -278,16 +278,16 @@ class srtFile{
 		$this->filename = $_filename;
 		$this->encoding = $_encoding;
 		$this->stats = array(
-				'tooSlow' => 0,
-				'slowAcceptable' => 0,
-				'aBitSlow' => 0,
-				'goodSlow' => 0,
-				'perfect' => 0,
-				'goodFast' => 0,
-				'aBitFast' => 0,
-				'fastAcceptable' => 0,
-				'tooFast' => 0
-				);
+			'tooSlow' => 0,
+			'slowAcceptable' => 0,
+			'aBitSlow' => 0,
+			'goodSlow' => 0,
+			'perfect' => 0,
+			'goodFast' => 0,
+			'aBitFast' => 0,
+			'fastAcceptable' => 0,
+			'tooFast' => 0
+		);
 		$this->loadContent();
 		$this->parseSubtitles();
 	}
@@ -325,6 +325,7 @@ class srtFile{
 			exec('file -i '.$this->filename, $exec);
 			$res_exec = explode('=', $exec[0]);
 		
+
 			if(empty($res_exec[1]))
 				throw new Exception('Unable to detect file encoding.');
 			$this->encoding = $res_exec[1];
@@ -338,9 +339,9 @@ class srtFile{
 	 */
 	private function parseSubtitles(){
 		$pattern = '#[0-9]+(?:\r\n|\r|\n)'
-							.'([0-9]{2}:[0-9]{2}:[0-9]{2},[0-9]{3}) --> ([0-9]{2}:[0-9]{2}:[0-9]{2},[0-9]{3})(?:\r\n|\r|\n)'
-							.'((?:.+(?:\r\n|\r|\n))+?)'
-							.'(?:\r\n|\r|\n)#';
+			.'([0-9]{2}:[0-9]{2}:[0-9]{2},[0-9]{3}) --> ([0-9]{2}:[0-9]{2}:[0-9]{2},[0-9]{3})(?:\r\n|\r|\n)'
+			.'((?:.+(?:\r\n|\r|\n))+?)'
+			.'(?:\r\n|\r|\n)#';
 		
 		$matches = array();
 		$res = preg_match_all($pattern, $this->file_content, $matches);
@@ -363,7 +364,7 @@ class srtFile{
 		$list = array();
 		$i = 0;
 		$pattern = '#'.preg_quote($word,'#').'#';
-		if($case_sensitive)
+		if(!$case_sensitive)
 			$pattern .= 'i';
 		foreach($this->subs as $sub){
 			if(preg_match($pattern, $sub->getText()))
@@ -490,21 +491,21 @@ class srtFile{
 		foreach($this->subs as $sub){
 			$sub->prepForStats();
 			$rs = $sub->getReadingSpeed();
-			if($rs <= 5)
+			if($rs < 5)
 				$this->stats['tooSlow']++;
-			elseif($rs <= 10)
+			elseif($rs < 10)
 				$this->stats['slowAcceptable']++;
-			elseif($rs <= 13)
+			elseif($rs < 13)
 				$this->stats['aBitSlow']++;
-			elseif($rs <= 15)
+			elseif($rs < 15)
 				$this->stats['goodSlow']++;
-			elseif($rs <= 23)
+			elseif($rs < 23)
 				$this->stats['perfect']++;
-			elseif($rs <= 27)
+			elseif($rs < 27)
 				$this->stats['goodFast']++;
-			elseif($rs <= 31)
+			elseif($rs < 31)
 				$this->stats['aBitFast']++;
-			elseif($rs <= 35)
+			elseif($rs < 35)
 				$this->stats['fastAcceptable']++;
 			else
 				$this->stats['tooFast']++;
