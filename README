@@ -10,7 +10,7 @@ try{
 	echo $file->getSub(0)->getText();
 
 	// merge 2 files and save the new generated file
-	$file2 = new srtFile('./subtitles.srt');
+	$file2 = new srtFile('./subtitles2.srt');
 	$file->mergeSrtFile($file2);
 	$file->build();
 	$file->save('./new_subtitles.srt');
