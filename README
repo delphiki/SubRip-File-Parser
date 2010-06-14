@@ -1,0 +1,21 @@
+SubRip File PHP Parser
+Julien Villetorte, 2010 (gdelphiki@gmail.com)
+
+Example:
+
+try{
+	$file = new srtFile('./subtitles.srt');
+
+	// display the text of the first entry
+	echo $file->getSub(0)->getText();
+
+	// merge 2 files and save the new generated file
+	$file2 = new srtFile('./subtitles.srt');
+	$file->mergeSrtFile($file2);
+	$file->build();
+	$file->save('./new_subtitles.srt');
+
+}
+catch(Exception $e){
+	echo 'Error: '.$e->getMessage()."\n";
+}
