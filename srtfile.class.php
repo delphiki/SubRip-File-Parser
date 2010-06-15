@@ -24,18 +24,79 @@
 */
 
 class srtFileEntry{
+	/**
+	 * Start Timecode (format: hh:mm:ss,msmsms)
+	 *
+	 * @var string
+	 */
 	private $startTC;
+
+	/**
+	 * Start Timecode (in milliseconds)
+	 *
+	 * @var int
+	 */
 	private $start = null;
+
+	/**
+	 * Stop Timecode (format: hh:mm:ss,msmsms)
+	 *
+	 * @var string
+	 */
 	private $stopTC;
+
+	/**
+	 * Stop Timecode (in milliseconds)
+	 *
+	 * @var int
+	 */
 	private $stop = null;
+
+	/**
+	 * Brut text (with ends of lines)
+	 *
+	 * @var string
+	 */
 	private $text;
-	private $strippedText; // stats
-	private $noTagText; // noTag
+
+	/**
+	 * Pre-formated text (without ends of lines) generated to compute satistics
+	 *
+	 * @var string
+	 */
+	private $strippedText;
+
+	/**
+	 * Brut text (with ends of lines) without Advanced SSA tags
+	 *
+	 * @var string
+	 */
+	private $noTagText;
+
+	/**
+	 * Entry duration in milliseconds
+	 *
+	 * @var int
+	 */
 	private $durationMS;
+
+	/**
+	 * Caracters / second
+	 *
+	 * @var float
+	 */
 	private $CPS;
+
+	/**
+	 * Reading Speed (based on VisualSubSync algorithm)
+	 *
+	 * @var float
+	 */
 	private $readingSpeed;
 	
 	/**
+	 * srtFileEntry constructor
+	 *
 	 * @param string $_start Start timecode
 	 * @param string $_stop End timcode
 	 * @param string $_text Text of the entry
@@ -58,7 +119,8 @@ class srtFileEntry{
 	 */
 
 	/**
-	 * @description Returns the text of the entry
+	 * Returns the text of the entry
+	 *
 	 * @param boolean $stripTags
 	 * @param boolean $stripBasic
 	 * @param array $replacements
@@ -104,7 +166,8 @@ class srtFileEntry{
 	}
 
 	/**
-	 * @description Get the full timecode of the entry
+	 * Get the full timecode of the entry
+	 *
 	 * @return string
 	 */
 	public function getTimeCodeString(){ 
@@ -112,7 +175,8 @@ class srtFileEntry{
 	}
 
 	/**
-	 * @description remplaces the text
+	 * Sets a new text value
+	 *
 	 * @param string $text the new text
 	 */
 	public function setText($_text){
@@ -120,7 +184,8 @@ class srtFileEntry{
 	}
 
 	/**
-	 * @description Sets the start timecode
+	 * Sets the start timecode
+	 *
 	 * @param string $_start
 	 */
 	public function setStartTC($_start){
@@ -129,7 +194,8 @@ class srtFileEntry{
 	}
 
 	/**
-	 * @description Sets the stop timecode
+	 * Sets the stop timecode
+	 *
 	 * @param string $_stop
 	 */
 	public function setStopTC($_stop){
@@ -138,7 +204,8 @@ class srtFileEntry{
 	}
 
 	/**
-	 * @description Sets the start timecode as milliseconds
+	 * Sets the start timecode as milliseconds
+	 *
 	 * @param int $_start
 	 */
 	public function setStart($_start){
@@ -147,7 +214,8 @@ class srtFileEntry{
 	}
 
 	/**
-	 * @description Sets the stop timecode as milliseconds
+	 * Sets the stop timecode as milliseconds
+	 *
 	 * @param int $_stop
 	 */
 	public function setStop($_stop){
@@ -157,7 +225,7 @@ class srtFileEntry{
 
 
 	/**
-	 * @description Generate stipped text in order to compute statistics
+	 * Generates stripped text in order to compute statistics
 	 */
 	private function genStrippedText(){
 		$this->stripTags(true);
@@ -168,10 +236,11 @@ class srtFileEntry{
 	}
 	
 	/**
-	 * @description Strips tags
+	 * Strips Advanced SSA tags
+	 *
 	 * @param boolean $stripBasic If true, <i>, <b> and <u> tags will be stripped
 	 * @param array $replacements
-	 * @return boolean (true if tags actually stripped)
+	 * @return boolean (true if tags were actually stripped)
 	 */
 	public function stripTags($stripBasic = false, $replacements = array()){
 		if($stripBasic)
@@ -191,7 +260,8 @@ class srtFileEntry{
 	}
 	
 	/**
-	 * @description Returns the *real* string length
+	 * Returns the *real* string length
+	 *
 	 * @return int
 	 */
 	public function strlen(){
@@ -201,7 +271,8 @@ class srtFileEntry{
 	}
 	
 	/**
-	 * @description Convert time code string into milliseconds
+	 * Converts timecode string into milliseconds
+	 *
 	 * @param string $tc timecode as string 
 	 * @return int
 	 */
@@ -213,7 +284,8 @@ class srtFileEntry{
 	}
 
 	/**
-	 * @description Convert millisecondes into timecode string
+	 * Converts milliseconds into timecode string
+	 *
 	 * @param int $ms
 	 * @return string
 	 */
@@ -234,7 +306,7 @@ class srtFileEntry{
 	}
 		
 	/**
-	 * @description Computes entry duration in milliseconds
+	 * Computes entry duration in milliseconds
 	 */
 	public function calcDuration(){
 		$this->start = self::tc2ms($this->startTC);
@@ -244,14 +316,14 @@ class srtFileEntry{
 	}
 	
 	/**
-	 * @description Computes car. / second
+	 * Computes car. / second ratio
 	 */
 	private function calcCPS(){
 		$this->CPS = round($this->strlen() / ($this->durationMS / 1000), 1);
 	}
 	
 	/**
-	 * @description Computes Reading Speed (based on VisualSubSync algorithm)
+	 * Computes Reading Speed (based on VisualSubSync algorithm)
 	 */
 	private function calcRS(){
 		if($this->durationMS < 500)
@@ -263,14 +335,51 @@ class srtFileEntry{
 
 
 class srtFile{
+	/**
+	 * Original filename
+	 * 
+	 * @var string
+	 */
 	private $filename;
+
+	/**
+	 * Current buffer of the file
+	 * 
+	 * @var string
+	 */
 	private $file_content;
+
+	/**
+	 * Current buffer of the file without SubRip tags
+	 * 
+	 * @var string
+	 */
 	private $file_content_notag;
+
+	/**
+	 * Original file encoding
+	 * 
+	 * @var string
+	 */
 	private $encoding;
+
+	/**
+	 * Array containing all entries (srtFileEntry) of the subtitle
+	 * 
+	 * @var array
+	 */
 	private $subs = array();
+
+	/**
+	 * Array containing reading speed ranges
+	 * 
+	 * @var array
+	 */
 	private $stats = array();
 	
 	/**
+	 * srtFile constructor
+	 * 
 	 * @param string filename
 	 * @param string encoding of the file
 	 */
@@ -312,7 +421,7 @@ class srtFile{
 	}
 	
 	/**
-	 * @description Loads file content and detect file encoding if undefined
+	 * Loads file content and detect file encoding if undefined
 	 */
 	private function loadContent(){
 		if(!file_exists($this->filename))
@@ -335,7 +444,7 @@ class srtFile{
 	}
 	
 	/**
-	 * @description Parses file content into srtFileEntry objects
+	 * Parses file content into srtFileEntry objects
 	 */
 	private function parseSubtitles(){
 		$pattern = '#[0-9]+(?:\r\n|\r|\n)'
@@ -356,6 +465,8 @@ class srtFile{
 	}
 	
 	/**
+	 * Searchs a word/expression and returns ids of the matched entries
+	 *
 	 * @param string $word
 	 * @param boolean $case_sensitive
 	 * @return array containing ids of entries
@@ -376,7 +487,8 @@ class srtFile{
 	}
 	
 	/**
-	 * @description Imports subtitles from another srtFile object
+	 * Imports subtitles from another srtFile object
+	 *
 	 * @param srtFile $_srtFile another srtFile object
 	 */
 	public function mergeSrtFile($_srtFile){
@@ -388,7 +500,7 @@ class srtFile{
 	}
 	
 	/**
-	 * @description Sorts srtFile entries
+	 * Sorts srtFile entries
 	 */
 	public function sortSubs(){
 		$tmp = array();
@@ -403,7 +515,8 @@ class srtFile{
 	}
 
 	/**
-	 * @description Convert timecodes based on the specified FPS ratio
+	 * Converts timecodes based on the specified FPS ratio
+	 *
 	 * @param float $old_fps
 	 * @param float $new_fps
 	 */
@@ -421,7 +534,8 @@ class srtFile{
 	}
 	
 	/**
-	 * @description Builds file content (file_content[_notag])
+	 * Builds file content (file_content[_notag])
+	 *
 	 * @param boolean $stripTags If true, {\...} tags will be stripped
 	 * @param boolean $stripBasics If true, <i>, <b> and <u> tags will be stripped
 	 * @param array $replacements
@@ -443,7 +557,8 @@ class srtFile{
 	}
 	
 	/**
-	 * @description Builds file content (file_content[_notag]) from entry $from to entry $to
+	 * Builds file content (file_content[_notag]) from entry $from to entry $to
+	 *
 	 * @param int $from Id of the first entry
 	 * @param int $to Id of the last entry
 	 * @param boolean $stripTags If true, {\...} tags will be stripped
@@ -470,7 +585,8 @@ class srtFile{
 	}
 	
 	/**
-	 * @description Saves the file
+	 * Saves the file
+	 *
 	 * @param string $filename
 	 * @param boolean $stripTags If true, use file_content_notag instead of file_content
 	 */
@@ -485,7 +601,7 @@ class srtFile{
 	}
 	
 	/**
-	 * @description Computes statistics regarding reading speed
+	 * Computes statistics regarding reading speed
 	 */
 	public function calcStats(){
 		foreach($this->subs as $sub){
@@ -520,7 +636,8 @@ class srtFile{
 	}
 
 	/**
-	 * @description Saves statistics as XML file
+	 * Saves statistics as XML file
+	 *
 	 * @param string $filename
 	 */
 	public function saveStats($filename){
