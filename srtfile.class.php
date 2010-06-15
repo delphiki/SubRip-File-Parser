@@ -350,7 +350,7 @@ class srtFile{
 	private $file_content;
 
 	/**
-	 * Current buffer of the file without SubRip tags
+	 * Current buffer of the file without Advanced SSA tags
 	 * 
 	 * @var string
 	 */
