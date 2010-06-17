@@ -251,10 +251,8 @@ class srtFileEntry{
 		$patterns = "/{[^}]+}/";
 		$repl = "";
 		$this->noTagText = preg_replace($patterns, $repl, $this->noTagText);
-
-		foreach($replacements as $key => $replacement){
-			$this->noTagText = str_replace($key, $replacement, $this->noTagText);
-		}
+	
+		$this->noTagText = str_replace(array_keys($replacements), array_values($replacements), $this->noTagText);
 		
 		return ($this->text != $this->noTagText);
 	}
@@ -428,19 +426,20 @@ class srtFile{
 			throw new Exception('File "'.$this->filename.'" not found.');
 	
 		$this->file_content = file_get_contents($this->filename);
-		
+
 		if($this->encoding == ''){
 			$exec = array();
 			exec('file -i '.$this->filename, $exec);
 			$res_exec = explode('=', $exec[0]);
-		
+
 
 			if(empty($res_exec[1]))
 				throw new Exception('Unable to detect file encoding.');
 			$this->encoding = $res_exec[1];
 		}
-		
-		$this->file_content = mb_convert_encoding($this->file_content, 'UTF-8', $this->encoding);
+	
+		if(strtolower($this->encoding) != 'utf-8')
+			$this->file_content = mb_convert_encoding($this->file_content, 'UTF-8', $this->encoding);
 	}
 	
 	/**
