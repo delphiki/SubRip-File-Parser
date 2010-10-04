@@ -93,7 +93,7 @@ class srtFileEntry{
 	 * @var float
 	 */
 	private $readingSpeed;
-	
+
 	/**
 	 * srtFileEntry constructor
 	 *
@@ -104,16 +104,19 @@ class srtFileEntry{
 	public function __construct($_start, $_stop, $_text){
 		$this->startTC = $_start;
 		$this->stopTC = $_stop;
+		$this->start = self::tc2ms($_start);
+		$this->stop = self::tc2ms($_stop);
+		
 		$this->text = trim($_text);
 	}
-	
+
 	public function prepForStats(){
 		$this->genStrippedText();
 		$this->calcDuration();
 		$this->calcCPS();
 		$this->calcRS();
 	}
-	
+
 	/**
 	 * Getters
 	 */
@@ -229,12 +232,12 @@ class srtFileEntry{
 	 */
 	private function genStrippedText(){
 		$this->stripTags(true);
-		
+
 		$pattern = "/(\r\n|\n|\r)/";
 		$repl = " ";
 		$this->strippedText = preg_replace($pattern, $repl, $this->noTagText);
 	}
-	
+
 	/**
 	 * Strips Advanced SSA tags
 	 *
@@ -251,12 +254,12 @@ class srtFileEntry{
 		$patterns = "/{[^}]+}/";
 		$repl = "";
 		$this->noTagText = preg_replace($patterns, $repl, $this->noTagText);
-	
+
 		$this->noTagText = str_replace(array_keys($replacements), array_values($replacements), $this->noTagText);
-		
+
 		return ($this->text != $this->noTagText);
 	}
-	
+
 	/**
 	 * Returns the *real* string length
 	 *
@@ -267,7 +270,7 @@ class srtFileEntry{
 			$this->genStrippedText();
 		return mb_strlen($this->strippedText, 'UTF-8');
 	}
-	
+
 	/**
 	 * Converts timecode string into milliseconds
 	 *
@@ -277,7 +280,7 @@ class srtFileEntry{
 	public static function tc2ms($tc){
 		$tab = explode(':', $tc);
 		$durMS = $tab[0]*60*60*1000 + $tab[1]*60*1000 + floatval(str_replace(',','.',$tab[2]))*1000;
-		
+
 		return $durMS;
 	}
 
@@ -295,38 +298,38 @@ class srtFileEntry{
 		$tc_m = intval($x % 60);
 		$x /= 60;
 		$tc_h = intval($x % 24);
-	
+
 		$timecode = str_pad($tc_h, 2, '0', STR_PAD_LEFT).':'
 			.str_pad($tc_m, 2, '0', STR_PAD_LEFT).':'
 			.str_pad($tc_s, 2, '0', STR_PAD_LEFT).','
 			.str_pad($tc_ms, 3, '0', STR_PAD_LEFT);		
 		return $timecode;
 	}
-		
+
 	/**
 	 * Computes entry duration in milliseconds
 	 */
 	public function calcDuration(){
 		$this->start = self::tc2ms($this->startTC);
 		$this->stop = self::tc2ms($this->stopTC);
-		
+
 		$this->durationMS = $this->stop - $this->start;
 	}
-	
+
 	/**
 	 * Computes car. / second ratio
 	 */
 	private function calcCPS(){
 		$this->CPS = round($this->strlen() / ($this->durationMS / 1000), 1);
 	}
-	
+
 	/**
 	 * Computes Reading Speed (based on VisualSubSync algorithm)
 	 */
 	private function calcRS(){
 		if($this->durationMS < 500)
 			$this->durationMS = 500;
-			
+
 		$this->readingSpeed = ($this->strlen() * 1000) / ($this->durationMS-500);
 	}
 }
@@ -374,7 +377,7 @@ class srtFile{
 	 * @var array
 	 */
 	private $stats = array();
-	
+
 	/**
 	 * srtFile constructor
 	 * 
@@ -398,7 +401,7 @@ class srtFile{
 		$this->loadContent();
 		$this->parseSubtitles();
 	}
-	
+
 	/**
 	 * Getters
 	 */
@@ -417,15 +420,16 @@ class srtFile{
 	public function getSubCount(){
 		return count($this->subs);
 	}
-	
+
 	/**
 	 * Loads file content and detect file encoding if undefined
 	 */
 	private function loadContent(){
 		if(!file_exists($this->filename))
 			throw new Exception('File "'.$this->filename.'" not found.');
-	
-		$this->file_content = file_get_contents($this->filename);
+
+		if(!($this->file_content = file_get_contents($this->filename)))
+			throw new Exception($this->filename.' is not a proper .srt file.');
 
 		if($this->encoding == ''){
 			$exec = array();
@@ -436,12 +440,15 @@ class srtFile{
 			if(empty($res_exec[1]))
 				throw new Exception('Unable to detect file encoding.');
 			$this->encoding = $res_exec[1];
+			
+			if($this->encoding == 'unkown')
+				$this->encoding = 'Windows-1252';
 		}
-	
+
 		if(strtolower($this->encoding) != 'utf-8')
 			$this->file_content = mb_convert_encoding($this->file_content, 'UTF-8', $this->encoding);
 	}
-	
+
 	/**
 	 * Parses file content into srtFileEntry objects
 	 */
@@ -450,19 +457,20 @@ class srtFile{
 			.'([0-9]{2}:[0-9]{2}:[0-9]{2},[0-9]{3}) --> ([0-9]{2}:[0-9]{2}:[0-9]{2},[0-9]{3})(?:\r\n|\r|\n)'
 			.'((?:.+(?:\r\n|\r|\n))+?)'
 			.'(?:\r\n|\r|\n)#';
-		
+
 		$matches = array();
 		$res = preg_match_all($pattern, $this->file_content, $matches);
-		
+
 		if(!$res || $res == 0)
 			throw new Exception($this->filename.' is not a proper .srt file.');
-			
-		for($i=0; $i<count($matches[1]); $i++){
+
+		$entries_count = sizeof($matches[1]);
+		for($i=0; $i<$entries_count; $i++){
 			$sub = new srtFileEntry($matches[1][$i], $matches[2][$i], $matches[3][$i]);
 			$this->subs[] = $sub;
 		}
 	}
-	
+
 	/**
 	 * Searchs a word/expression and returns ids of the matched entries
 	 *
@@ -472,10 +480,13 @@ class srtFile{
 	 */
 	public function searchWord($word, $case_sensitive = false){
 		$list = array();
-		$i = 0;
 		$pattern = '#'.preg_quote($word,'#').'#';
 		if(!$case_sensitive)
 			$pattern .= 'i';
+			
+		$keys = array_keys($this->subs);
+		$sub_count = sizeof($keys);
+		$i = 0;
 		foreach($this->subs as $sub){
 			if(preg_match($pattern, $sub->getText()))
 				$list[] = $i;
@@ -484,7 +495,7 @@ class srtFile{
 
 		return (count($list) > 0)?$list:-1;
 	}
-	
+
 	/**
 	 * Imports subtitles from another srtFile object
 	 *
@@ -494,21 +505,27 @@ class srtFile{
 		if(!$_srtFile instanceof srtFile)
 			throw new Exception('srtFile object parameter exepected.');
 		$this->subs = array_merge($this->subs, $_srtFile->getSubs());
-		
+
 		$this->sortSubs();
 	}
-	
+
 	/**
 	 * Sorts srtFile entries
 	 */
 	public function sortSubs(){
 		$tmp = array();
+		$keys = array_keys($this->subs);
+		$sub_count = sizeof($keys);
 		foreach($this->subs as $sub)
 			$tmp[srtFileEntry::tc2ms($sub->getStartTC())] = $sub;
-			
+
 		ksort($tmp);
-		
+
 		$this->subs = array();
+		
+		$keys_tmp = array_keys($tmp);
+		$tmp_count = sizeof($keys_tmp);
+		
 		foreach($tmp as $sub)
 			$this->subs[] = $sub;
 	}
@@ -520,18 +537,20 @@ class srtFile{
 	 * @param float $new_fps
 	 */
 	public function changeFPS($old_fps, $new_fps){
-		foreach($this->subs as $sub){
-			$old_start = $sub->getStart();
-			$old_stop = $sub->getStop();
-			
+		$keys = array_keys($this->subs);
+		$sub_count = sizeof($keys);
+		for($i=0; $i < $sub_count; $i++){
+			$old_start = $this->subs[$keys[$i]]->getStart();
+			$old_stop = $this->subs[$keys[$i]]->getStop();
+
 			$new_start = round($old_start * ($new_fps / $old_fps));
 			$new_stop = round($old_stop * ($new_fps / $old_fps));
 
-			$sub->setStart($new_start);
-			$sub->setStop($new_stop);
+			$this->subs[$keys[$i]]->setStart($new_start);
+			$this->subs[$keys[$i]]->setStop($new_stop);
 		}
 	}
-	
+
 	/**
 	 * Builds file content (file_content[_notag])
 	 *
@@ -540,12 +559,11 @@ class srtFile{
 	 * @param array $replacements
 	 */
 	public function build($stripTags = false, $stripBasic = false, $replacements = array()){
-		$i = 1;
 		$buffer = "";
-		foreach($this->subs as $sub){
-			$buffer .= $i."\r\n";
-			$buffer .= $sub->getTimeCodeString()."\r\n";
-			$buffer .= $sub->getText($stripTags, $stripBasic, $replacements)."\r\n";
+		foreach($this->subs as $key => $sub){
+			$buffer .= ($i+1)."\r\n";
+			$buffer .= $this->subs[$key]->getTimeCodeString()."\r\n";
+			$buffer .= $this->subs[$key]->getText($stripTags, $stripBasic, $replacements)."\r\n";
 			$buffer .= "\r\n";
 			$i++;
 		}
@@ -554,7 +572,7 @@ class srtFile{
 		else
 			$this->file_content = $buffer;
 	}
-	
+
 	/**
 	 * Builds file content (file_content[_notag]) from entry $from to entry $to
 	 *
@@ -569,11 +587,11 @@ class srtFile{
 		$buffer = "";
 		if($from < 0 || $from >= $this->getSubCount()) $from = 0;
 		if($to < 0 || $to >= $this->getSubCount()) $to = $this->getSubCount()-1;
-		
+
 		for($j = $from; $j <= $to; $j++){
 			$buffer .= $i."\r\n";
-			$buffer .= $this->getSub($j)->getTimeCodeString()."\r\n";
-			$buffer .= $this->getSub($j)->getText($stripTags, $stripBasic, $replacements)."\r\n";
+			$buffer .= $this->subs[$j]->getTimeCodeString()."\r\n";
+			$buffer .= $this->subs[$j]->getText($stripTags, $stripBasic, $replacements)."\r\n";
 			$buffer .= "\r\n";
 			$i++;
 		}
@@ -582,7 +600,7 @@ class srtFile{
 		else
 			$this->file_content = $buffer;	
 	}
-	
+
 	/**
 	 * Saves the file
 	 *
@@ -592,20 +610,22 @@ class srtFile{
 	public function save($filename = null, $stripTags = false){
 		if($filename == null)
 			$filename = $this->filename;
-		
+
 		$file_content = mb_convert_encoding($stripTags?$this->file_content_notag:$this->file_content, $this->encoding, 'UTF-8');
 		$res = file_put_contents($filename, $file_content);
 		if(!$res)
 			throw new Exception('Unable to save the file.');
 	}
-	
+
 	/**
 	 * Computes statistics regarding reading speed
 	 */
 	public function calcStats(){
-		foreach($this->subs as $sub){
-			$sub->prepForStats();
-			$rs = $sub->getReadingSpeed();
+		$keys = array_keys($this->subs);
+		$sub_count = sizeof($keys);
+		for($i=0; $i < $sub_count; $i++){
+			$this->subs[$keys[$i]]->prepForStats();
+			$rs = $this->subs[$keys[$i]]->getReadingSpeed();
 			if($rs < 5)
 				$this->stats['tooSlow']++;
 			elseif($rs < 10)
@@ -626,7 +646,7 @@ class srtFile{
 				$this->stats['tooFast']++;
 		}
 	}
-	
+
 	/**
 	 * @return int
 	 */
@@ -639,20 +659,35 @@ class srtFile{
 	 *
 	 * @param string $filename
 	 */
-	public function saveStats($filename){
-		$tmp = '<?xml version="1.0" encoding="UTF-8"?>'."\n";
-		$tmp .= '<statistics file="'.$this->filename.'">'."\n";
-		$tmp .= '<range name="tooSlow" color="#9999FF" value="'.$this->stats['tooSlow'].'" percent="'.$this->getPercent($this->stats['tooSlow']).'" />'."\n";
-		$tmp .= '<range name="slowAcceptable" color="#99CCFF" value="'.$this->stats['slowAcceptable'].'" percent="'.$this->getPercent($this->stats['slowAcceptable']).'" />'."\n";
-		$tmp .= '<range name="aBitSlow" color="#99FFFF" value="'.$this->stats['aBitSlow'].'" percent="'.$this->getPercent($this->stats['aBitSlow']).'" />'."\n";
-		$tmp .= '<range name="goodSlow" color="#99FFCC" value="'.$this->stats['goodSlow'].'" percent="'.$this->getPercent($this->stats['goodSlow']).'" />'."\n";
-		$tmp .= '<range name="perfect" color="#99FF99" value="'.$this->stats['perfect'].'" percent="'.$this->getPercent($this->stats['perfect']).'" />'."\n";
-		$tmp .= '<range name="goodFast" color="#CCFF99" value="'.$this->stats['goodFast'].'" percent="'.$this->getPercent($this->stats['goodFast']).'" />'."\n";
-		$tmp .= '<range name="aBitFast" color="#FFFF99" value="'.$this->stats['aBitFast'].'" percent="'.$this->getPercent($this->stats['aBitFast']).'" />'."\n";
-		$tmp .= '<range name="fastAcceptable" color="#FFCC99" value="'.$this->stats['fastAcceptable'].'" percent="'.$this->getPercent($this->stats['fastAcceptable']).'" />'."\n";
-		$tmp .= '<range name="tooFast" color="#FF9999" value="'.$this->stats['tooFast'].'" percent="'.$this->getPercent($this->stats['tooFast']).'" />'."\n";
-		$tmp .= '</statistics>';
-		
+	public function saveStats($filename, $output = 'html'){
+		if($output == 'xml'){
+			$tmp = '<?xml version="1.0" encoding="UTF-8"?>'."\n";
+			$tmp .= '<statistics file="'.$this->filename.'">'."\n";
+			$tmp .= '<range name="tooSlow" color="#9999FF" value="'.$this->stats['tooSlow'].'" percent="'.$this->getPercent($this->stats['tooSlow']).'" />'."\n";
+			$tmp .= '<range name="slowAcceptable" color="#99CCFF" value="'.$this->stats['slowAcceptable'].'" percent="'.$this->getPercent($this->stats['slowAcceptable']).'" />'."\n";
+			$tmp .= '<range name="aBitSlow" color="#99FFFF" value="'.$this->stats['aBitSlow'].'" percent="'.$this->getPercent($this->stats['aBitSlow']).'" />'."\n";
+			$tmp .= '<range name="goodSlow" color="#99FFCC" value="'.$this->stats['goodSlow'].'" percent="'.$this->getPercent($this->stats['goodSlow']).'" />'."\n";
+			$tmp .= '<range name="perfect" color="#99FF99" value="'.$this->stats['perfect'].'" percent="'.$this->getPercent($this->stats['perfect']).'" />'."\n";
+			$tmp .= '<range name="goodFast" color="#CCFF99" value="'.$this->stats['goodFast'].'" percent="'.$this->getPercent($this->stats['goodFast']).'" />'."\n";
+			$tmp .= '<range name="aBitFast" color="#FFFF99" value="'.$this->stats['aBitFast'].'" percent="'.$this->getPercent($this->stats['aBitFast']).'" />'."\n";
+			$tmp .= '<range name="fastAcceptable" color="#FFCC99" value="'.$this->stats['fastAcceptable'].'" percent="'.$this->getPercent($this->stats['fastAcceptable']).'" />'."\n";
+			$tmp .= '<range name="tooFast" color="#FF9999" value="'.$this->stats['tooFast'].'" percent="'.$this->getPercent($this->stats['tooFast']).'" />'."\n";
+			$tmp .= '</statistics>';
+		}
+		elseif($output == 'html'){
+			$tmp = '<ul style="padding-left:0;margin:1px;padding:2px;">';
+			$tmp .= '<li style="background-color:#9999FF">TOO SLOW = '.$this->stats['tooSlow'].' ('.$this->getPercent($this->stats['tooSlow']).'%)</li>';
+			$tmp .= '<li style="background-color:#99CCFF">Slow, acceptable = '.$this->stats['slowAcceptable'].' ('.$this->getPercent($this->stats['slowAcceptable']).'%)</li>';
+			$tmp .= '<li style="background-color:#99FFFF">A bit slow = '.$this->stats['aBitSlow'].' ('.$this->getPercent($this->stats['aBitSlow']).'%)</li>';
+			$tmp .= '<li style="background-color:#99FFCC">Good = '.$this->stats['goodSlow'].' ('.$this->getPercent($this->stats['goodSlow']).'%)</li>';
+			$tmp .= '<li style="background-color:#99FF99">Perfect = '.$this->stats['perfect'].' ('.$this->getPercent($this->stats['perfect']).'%)</li>';
+			$tmp .= '<li style="background-color:#CCFF99">Good = '.$this->stats['goodFast'].' ('.$this->getPercent($this->stats['goodFast']).'%)</li>';
+			$tmp .= '<li style="background-color:#FFFF99">A bit fast = '.$this->stats['aBitFast'].' ('.$this->getPercent($this->stats['aBitFast']).'%)</li>';
+			$tmp .= '<li style="background-color:#FFCC99">Fast, acceptable = '.$this->stats['fastAcceptable'].' ('.$this->getPercent($this->stats['fastAcceptable']).'%)</li>';
+			$tmp .= '<li style="background-color:#FF9999">TOO FAST = '.$this->stats['tooFast'].' ('.$this->getPercent($this->stats['tooFast']).'%)</li>';
+			$tmp .= '</ul>';
+		}
+
 		file_put_contents($filename, $tmp);
 	}
 }
