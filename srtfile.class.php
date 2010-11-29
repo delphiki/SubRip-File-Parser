@@ -234,7 +234,7 @@ class srtFileEntry{
 		$this->stripTags(true);
 
 		$pattern = "/(\r\n|\n|\r)/";
-		$repl = " ";
+		$repl = "  ";
 		$this->strippedText = preg_replace($pattern, $repl, $this->noTagText);
 	}
 
@@ -412,7 +412,7 @@ class srtFile{
 		return $this->encoding;
 	}
 	public function getSub($idx){
-		return isset($this->subs[$idx])?$this->subs[$idx]:0;
+		return isset($this->subs[$idx])?$this->subs[$idx]:false;
 	}
 	public function getSubs(){
 		return $this->subs;
@@ -420,7 +420,10 @@ class srtFile{
 	public function getSubCount(){
 		return count($this->subs);
 	}
-
+	public function getFilename(){
+		return $this->filename;
+	}
+	
 	/**
 	 * Loads file content and detect file encoding if undefined
 	 */
