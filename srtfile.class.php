@@ -327,8 +327,8 @@ class srtFileEntry{
 	 * Computes Reading Speed (based on VisualSubSync algorithm)
 	 */
 	private function calcRS(){
-		if($this->durationMS < 500)
-			$this->durationMS = 500;
+		if($this->durationMS <= 500)
+			$this->durationMS = 501;
 
 		$this->readingSpeed = ($this->strlen() * 1000) / ($this->durationMS-500);
 	}
@@ -336,6 +336,16 @@ class srtFileEntry{
 
 
 class srtFile{
+	/**
+	 * Pattern used for the parsing regex
+	 */
+	const pattern = '#[0-9]+(?:\r\n|\r|\n)([0-9]{2}:[0-9]{2}:[0-9]{2},[0-9]{3}) --> ([0-9]{2}:[0-9]{2}:[0-9]{2},[0-9]{3})(?:\r\n|\r|\n)((?:.*(?:\r\n|\r|\n))*?)(?:\r\n|\r|\n)#';
+    
+	/**
+	 * Default encoding if unable to detect
+	 */
+	const default_encoding = 'Windows-1252';
+	
 	/**
 	 * Original filename
 	 * 
@@ -385,7 +395,7 @@ class srtFile{
 	 * @param string encoding of the file
 	 */
 	public function __construct($_filename, $_encoding = ''){
-		$this->filename = $_filename;
+        $this->filename = $_filename;
 		$this->encoding = $_encoding;
 		$this->stats = array(
 			'tooSlow' => 0,
@@ -425,6 +435,39 @@ class srtFile{
 	}
 	
 	/**
+     * Checks if the file is a valid SubRip file
+     * @param string $_filename The path to the file
+     * @return boolean
+	 */
+	
+    public static function isValid($_filename){
+        $file_content = file_get_contents($_filename);
+        
+        return preg_match(self::pattern, $file_content);
+    }
+    
+    /**
+     * Converts file content to UTF-8
+	 */
+    
+    private function convertEncoding(){
+        $exec = array();
+		exec('file -i '.$this->filename, $exec);
+		$res_exec = explode('=', $exec[0]);
+
+
+		if(empty($res_exec[1]))
+			throw new Exception('Unable to detect file encoding.');
+		$this->encoding = $res_exec[1];
+			
+		if(in_array($this->encoding, array('unknown', 'iso-8859-1')))
+			$this->encoding = self::default_encoding;
+            
+        if(strtolower($this->encoding) != 'utf-8')
+			$this->file_content = mb_convert_encoding($this->file_content, 'UTF-8', $this->encoding);
+    }
+    
+	/**
 	 * Loads file content and detect file encoding if undefined
 	 */
 	private function loadContent(){
@@ -434,22 +477,7 @@ class srtFile{
 		if(!($this->file_content = file_get_contents($this->filename)))
 			throw new Exception($this->filename.' is not a proper .srt file.');
 
-		if($this->encoding == ''){
-			$exec = array();
-			exec('file -i '.$this->filename, $exec);
-			$res_exec = explode('=', $exec[0]);
-
-
-			if(empty($res_exec[1]))
-				throw new Exception('Unable to detect file encoding.');
-			$this->encoding = $res_exec[1];
-			
-			if($this->encoding == 'unkown')
-				$this->encoding = 'Windows-1252';
-		}
-
-		if(strtolower($this->encoding) != 'utf-8')
-			$this->file_content = mb_convert_encoding($this->file_content, 'UTF-8', $this->encoding);
+		$this->convertEncoding();
 	}
 
 	/**
@@ -519,8 +547,11 @@ class srtFile{
 		$tmp = array();
 		$keys = array_keys($this->subs);
 		$sub_count = sizeof($keys);
-		foreach($this->subs as $sub)
-			$tmp[srtFileEntry::tc2ms($sub->getStartTC())] = $sub;
+		$count = 0; // useful if 2 cues start at the same time code
+		foreach($this->subs as $sub){
+			$tmp[srtFileEntry::tc2ms($sub->getStartTC()).$count] = $sub;
+			$count++;
+		}
 
 		ksort($tmp);
 
