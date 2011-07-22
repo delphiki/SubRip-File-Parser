@@ -254,8 +254,11 @@ class srtFileEntry{
 		$patterns = "/{[^}]+}/";
 		$repl = "";
 		$this->noTagText = preg_replace($patterns, $repl, $this->noTagText);
-
-		$this->noTagText = str_replace(array_keys($replacements), array_values($replacements), $this->noTagText);
+        
+        if(count($replacements) > 0){
+            $this->noTagText = str_replace(array_keys($replacements), array_values($replacements), $this->noTagText);
+            $this->noTagText = iconv('UTF-8', 'UTF-8//IGNORE', $this->noTagText);
+        }
 
 		return ($this->text != $this->noTagText);
 	}
@@ -334,6 +337,11 @@ class srtFileEntry{
 	}
 }
 
+define ('UTF32_BIG_ENDIAN_BOM'   , chr(0x00) . chr(0x00) . chr(0xFE) . chr(0xFF));
+define ('UTF32_LITTLE_ENDIAN_BOM', chr(0xFF) . chr(0xFE) . chr(0x00) . chr(0x00));
+define ('UTF16_BIG_ENDIAN_BOM'   , chr(0xFE) . chr(0xFF));
+define ('UTF16_LITTLE_ENDIAN_BOM', chr(0xFF) . chr(0xFE));
+define ('UTF8_BOM'               , chr(0xEF) . chr(0xBB) . chr(0xBF));
 
 class srtFile{
 	/**
@@ -373,6 +381,13 @@ class srtFile{
 	 * @var string
 	 */
 	private $encoding;
+
+	/**
+	 * File has BOM or not 
+	 *
+     * @var boolean
+     */
+	private $has_BOM = false;
 
 	/**
 	 * Array containing all entries (srtFileEntry) of the subtitle
@@ -446,6 +461,58 @@ class srtFile{
         return preg_match(self::pattern, $file_content);
     }
     
+    public static function cp1252_to_utf8($text) {
+		$buffer = $text;
+		$cp1252 = array(
+			128 => "€", # euro sign
+			130 => "‚", # single low-9 quotation mark
+			131 => "ƒ", # latin small letter f with hook
+			132 => "„", # double low-9 quotation mark
+			133 => "…", # horizontal ellipsis
+			134 => "†", # dagger
+			135 => "‡", # double dagger
+			136 => "ˆ", # modifier letter circumflex accent
+			137 => "‰", # per mille sign
+			138 => "Š", # latin capital letter s with caron
+			139 => "‹", # single left-pointing angle quotation mark
+			140 => "Œ", # latin capital ligature oe
+			142 => "Ž", # latin capital letter z with caron
+			145 => "‘", # left single quotation mark
+			146 => "’", # right single quotation mark
+			147 => "“", # left double quotation mark
+			148 => "”", # right double quotation mark
+			149 => "•", # bullet
+			150 => "–", # en dash
+			151 => "—", # em dash
+			152 =>  "˜", # small tilde
+			153 => "™", # trade mark sign
+			154 =>  "š", # latin small letter s with caron
+			155 => "›", # single right-pointing angle quotation mark
+			156 => "œ", # latin small ligature oe
+			158 => "ž", # latin small letter z with caron
+			159 => "Ÿ" # latin capital letter y with diaeresis
+		);
+		$buffer_encoded = utf8_encode($buffer);
+		
+		foreach($cp1252 as $ord => $encoded){
+			$buffer_encoded=str_replace(utf8_encode(chr($ord)), $encoded, $buffer_encoded);
+		}
+		return $buffer_encoded;
+	}
+ 	
+ 	public static function detect_utf_encoding($text) {
+		$first2 = substr($text, 0, 2);
+		$first3 = substr($text, 0, 3);
+		$first4 = substr($text, 0, 3);
+     
+		if ($first3 == UTF8_BOM) return 'UTF-8';
+		elseif ($first4 == UTF32_BIG_ENDIAN_BOM) return 'UTF-32BE';
+		elseif ($first4 == UTF32_LITTLE_ENDIAN_BOM) return 'UTF-32LE';
+		elseif ($first2 == UTF16_BIG_ENDIAN_BOM) return 'UTF-16BE';
+		elseif ($first2 == UTF16_LITTLE_ENDIAN_BOM) return 'UTF-16LE';
+		else return false;
+	}
+    
     /**
      * Converts file content to UTF-8
 	 */
@@ -459,12 +526,23 @@ class srtFile{
 		if(empty($res_exec[1]))
 			throw new Exception('Unable to detect file encoding.');
 		$this->encoding = $res_exec[1];
-			
-		if(in_array($this->encoding, array('unknown', 'iso-8859-1')))
-			$this->encoding = self::default_encoding;
-            
-        if(strtolower($this->encoding) != 'utf-8')
-			$this->file_content = mb_convert_encoding($this->file_content, 'UTF-8', $this->encoding);
+		
+		$tmp_encoding = strtolower($this->encoding);
+		
+		switch($tmp_encoding){
+			case 'unknown':
+			case 'windows-1252':
+			case 'iso-8859-1':
+			case 'iso-8859-15':
+				$this->encoding = self::default_encoding;
+				$this->file_content = self::cp1252_to_utf8($this->file_content);
+			break;
+			default:
+				if(strtolower(substr($this->encoding, 0, 3)) == 'utf' && self::detect_utf_encoding($this->file_content))
+					$this->has_BOM = true;
+				$this->file_content = mb_convert_encoding($this->file_content, 'UTF-8', $this->encoding);
+			break;
+		}
     }
     
 	/**
@@ -484,13 +562,8 @@ class srtFile{
 	 * Parses file content into srtFileEntry objects
 	 */
 	private function parseSubtitles(){
-		$pattern = '#[0-9]+(?:\r\n|\r|\n)'
-			.'([0-9]{2}:[0-9]{2}:[0-9]{2},[0-9]{3}) --> ([0-9]{2}:[0-9]{2}:[0-9]{2},[0-9]{3})(?:\r\n|\r|\n)'
-			.'((?:.*(?:\r\n|\r|\n))*?)'
-			.'(?:\r\n|\r|\n)#';
-
 		$matches = array();
-		$res = preg_match_all($pattern, $this->file_content, $matches);
+		$res = preg_match_all(self::pattern, $this->file_content, $matches);
 
 		if(!$res || $res == 0)
 			throw new Exception($this->filename.' is not a proper .srt file.');
@@ -536,7 +609,7 @@ class srtFile{
 		if(!$_srtFile instanceof srtFile)
 			throw new Exception('srtFile object parameter exepected.');
 		$this->subs = array_merge($this->subs, $_srtFile->getSubs());
-
+		
 		$this->sortSubs();
 	}
 
@@ -644,8 +717,15 @@ class srtFile{
 	public function save($filename = null, $stripTags = false){
 		if($filename == null)
 			$filename = $this->filename;
-
-		$file_content = mb_convert_encoding($stripTags?$this->file_content_notag:$this->file_content, $this->encoding, 'UTF-8');
+		
+		$content = $stripTags ? $this->file_content_notag : $this->file_content;
+			
+		if(strtolower($this->encoding) != 'utf-8')
+			$file_content = mb_convert_encoding($content, $this->encoding, 'UTF-8');
+		elseif(strtolower($this->encoding) == 'utf-8' && $this->has_BOM && substr($content, 0, 3) != UTF8_BOM){
+			$file_content = UTF8_BOM . $content;
+		}
+		
 		$res = file_put_contents($filename, $file_content);
 		if(!$res)
 			throw new Exception('Unable to save the file.');
