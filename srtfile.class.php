@@ -254,11 +254,11 @@ class srtFileEntry{
 		$patterns = "/{[^}]+}/";
 		$repl = "";
 		$this->noTagText = preg_replace($patterns, $repl, $this->noTagText);
-        
-        if(count($replacements) > 0){
-            $this->noTagText = str_replace(array_keys($replacements), array_values($replacements), $this->noTagText);
-            $this->noTagText = iconv('UTF-8', 'UTF-8//IGNORE', $this->noTagText);
-        }
+
+		if(count($replacements) > 0){
+			$this->noTagText = str_replace(array_keys($replacements), array_values($replacements), $this->noTagText);
+			$this->noTagText = iconv('UTF-8', 'UTF-8//IGNORE', $this->noTagText);
+		}
 
 		return ($this->text != $this->noTagText);
 	}
@@ -410,7 +410,7 @@ class srtFile{
 	 * @param string encoding of the file
 	 */
 	public function __construct($_filename, $_encoding = ''){
-        $this->filename = $_filename;
+		$this->filename = $_filename;
 		$this->encoding = $_encoding;
 		$this->stats = array(
 			'tooSlow' => 0,
@@ -455,13 +455,17 @@ class srtFile{
      * @return boolean
 	 */
 	
-    public static function isValid($_filename){
-        $file_content = file_get_contents($_filename);
-        
-        return preg_match(self::pattern, $file_content);
-    }
-    
-    public static function cp1252_to_utf8($text) {
+	public static function isValid($_filename){
+		$file_content = file_get_contents($_filename);
+
+		return preg_match(self::pattern, $file_content);
+	}
+
+	/**
+     * Converts Windows-1252 (CP-1252) to UTF-8
+     * @param string $text The string to be converted
+     */
+	public static function cp1252_to_utf8($text) {
 		$buffer = $text;
 		$cp1252 = array(
 			128 => "€", # euro sign
@@ -499,12 +503,16 @@ class srtFile{
 		}
 		return $buffer_encoded;
 	}
- 	
- 	public static function detect_utf_encoding($text) {
+
+	/**
+	 * Detects UTF encoding
+	 * @param string $text
+	 */
+	public static function detect_utf_encoding($text) {
 		$first2 = substr($text, 0, 2);
 		$first3 = substr($text, 0, 3);
 		$first4 = substr($text, 0, 3);
-     
+
 		if ($first3 == UTF8_BOM) return 'UTF-8';
 		elseif ($first4 == UTF32_BIG_ENDIAN_BOM) return 'UTF-32BE';
 		elseif ($first4 == UTF32_LITTLE_ENDIAN_BOM) return 'UTF-32LE';
@@ -512,13 +520,12 @@ class srtFile{
 		elseif ($first2 == UTF16_LITTLE_ENDIAN_BOM) return 'UTF-16LE';
 		else return false;
 	}
-    
-    /**
+
+	/**
      * Converts file content to UTF-8
 	 */
-    
-    private function convertEncoding(){
-        $exec = array();
+	private function convertEncoding(){
+		$exec = array();
 		exec('file -i '.$this->filename, $exec);
 		$res_exec = explode('=', $exec[0]);
 
@@ -540,11 +547,18 @@ class srtFile{
 			default:
 				if(strtolower(substr($this->encoding, 0, 3)) == 'utf' && self::detect_utf_encoding($this->file_content))
 					$this->has_BOM = true;
-				$this->file_content = mb_convert_encoding($this->file_content, 'UTF-8', $this->encoding);
+
+				if(strtolower(substr($this->encoding, 0, 7)) == 'unknown'){
+					$this->encoding = self::default_encoding;
+					$this->file_content = self::cp1252_to_utf8($this->file_content);		
+				}
+				else{
+					$this->file_content = mb_convert_encoding($this->file_content, 'UTF-8', $this->encoding);
+				}
 			break;
 		}
-    }
-    
+	}
+
 	/**
 	 * Loads file content and detect file encoding if undefined
 	 */
@@ -555,6 +569,7 @@ class srtFile{
 		if(!($this->file_content = file_get_contents($this->filename)))
 			throw new Exception($this->filename.' is not a proper .srt file.');
 
+		$this->file_content .= "\n\n"; // fixes files missing blank lines at the end
 		$this->convertEncoding();
 	}
 
@@ -612,6 +627,17 @@ class srtFile{
 		
 		$this->sortSubs();
 	}
+	
+	/**
+	 * Deletes a cue
+	 *
+	 * @param int $_index
+	 */
+	public function deleteSub($_index){
+		if(isset($this->subs[$_index])){
+			unset($this->subs[$_index]);
+		}
+	}
 
 	/**
 	 * Sorts srtFile entries
@@ -622,7 +648,7 @@ class srtFile{
 		$sub_count = sizeof($keys);
 		$count = 0; // useful if 2 cues start at the same time code
 		foreach($this->subs as $sub){
-			$tmp[srtFileEntry::tc2ms($sub->getStartTC()).$count] = $sub;
+			$tmp[srtFileEntry::tc2ms($sub->getStartTC()).'.'.$count] = $sub;
 			$count++;
 		}
 
@@ -667,6 +693,7 @@ class srtFile{
 	 */
 	public function build($stripTags = false, $stripBasic = false, $replacements = array()){
 		$buffer = "";
+		$i = 0;
 		foreach($this->subs as $key => $sub){
 			$buffer .= ($i+1)."\r\n";
 			$buffer .= $this->subs[$key]->getTimeCodeString()."\r\n";
