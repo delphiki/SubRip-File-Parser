@@ -173,8 +173,12 @@ class srtFileEntry{
 	 *
 	 * @return string
 	 */
-	public function getTimeCodeString(){ 
-		return $this->startTC.' --> '.$this->stopTC; 
+	public function getTimeCodeString($_WebVTT = false){ 
+		$res = $this->startTC.' --> '.$this->stopTC;
+		
+		if($_WebVTT) $res = str_replace(',', '.', $res);
+
+		return $res;
 	}
 
 	/**
@@ -347,7 +351,7 @@ class srtFile{
 	/**
 	 * Pattern used for the parsing regex
 	 */
-	const pattern = '#[0-9]+(?:\r\n|\r|\n)([0-9]{2}:[0-9]{2}:[0-9]{2},[0-9]{3}) --> ([0-9]{2}:[0-9]{2}:[0-9]{2},[0-9]{3})(?:\r\n|\r|\n)((?:.*(?:\r\n|\r|\n))*?)(?:\r\n|\r|\n)#';
+	const pattern = '#[0-9]+(?:\r\n|\r|\n)([0-9]{2}:[0-9]{2}:[0-9]{2}(?:,|\.)[0-9]{3}) --> ([0-9]{2}:[0-9]{2}:[0-9]{2}(?:,|\.)[0-9]{3})(?:\r\n|\r|\n)((?:.*(?:\r\n|\r|\n))*?)(?:\r\n|\r|\n)#';
     
 	/**
 	 * Default encoding if unable to detect
@@ -404,6 +408,13 @@ class srtFile{
 	private $stats = array();
 
 	/**
+	 * Build as WebVTT file
+	 * 
+	 * @var boolean
+	 */
+	private $is_WebVTT = false;
+	
+	/**
 	 * srtFile constructor
 	 * 
 	 * @param string filename
@@ -447,6 +458,15 @@ class srtFile{
 	}
 	public function getFilename(){
 		return $this->filename;
+	}
+	public function isWebVTT(){
+		return $this->is_WebVTT;
+	}
+	public function setWebVTT($_is_WebVTT = true){
+		$this->is_WebVTT = (bool)$_is_WebVTT;
+
+		if($this->is_WebVTT)
+			$this->encoding = 'utf-8';
 	}
 	
 	/**
@@ -583,6 +603,8 @@ class srtFile{
 		if(!$res || $res == 0)
 			throw new Exception($this->filename.' is not a proper .srt file.');
 
+		if(strpos('.', $matches[1][0])) $this->is_WebVTT = true;
+
 		$entries_count = sizeof($matches[1]);
 		for($i=0; $i<$entries_count; $i++){
 			$sub = new srtFileEntry($matches[1][$i], $matches[2][$i], $matches[3][$i]);
@@ -692,11 +714,12 @@ class srtFile{
 	 * @param array $replacements
 	 */
 	public function build($stripTags = false, $stripBasic = false, $replacements = array()){
-		$buffer = "";
+		$buffer = ($this->is_WebVTT) ? "WEBVTT\r\n\r\n" : "";
+
 		$i = 0;
 		foreach($this->subs as $key => $sub){
 			$buffer .= ($i+1)."\r\n";
-			$buffer .= $this->subs[$key]->getTimeCodeString()."\r\n";
+			$buffer .= $this->subs[$key]->getTimeCodeString($this->is_WebVTT)."\r\n";
 			$buffer .= $this->subs[$key]->getText($stripTags, $stripBasic, $replacements)."\r\n";
 			$buffer .= "\r\n";
 			$i++;
@@ -749,9 +772,10 @@ class srtFile{
 			
 		if(strtolower($this->encoding) != 'utf-8')
 			$file_content = mb_convert_encoding($content, $this->encoding, 'UTF-8');
-		elseif(strtolower($this->encoding) == 'utf-8' && $this->has_BOM && substr($content, 0, 3) != UTF8_BOM){
+		elseif(strtolower($this->encoding) == 'utf-8' && $this->has_BOM && substr($content, 0, 3) != UTF8_BOM)
 			$file_content = UTF8_BOM . $content;
-		}
+		else
+			$file_content = $content;
 		
 		$res = file_put_contents($filename, $file_content);
 		if(!$res)
