@@ -389,8 +389,8 @@ class srtFile{
 	/**
 	 * File has BOM or not 
 	 *
-     * @var boolean
-     */
+         * @var boolean
+         */
 	private $has_BOM = false;
 
 	/**
@@ -470,9 +470,9 @@ class srtFile{
 	}
 	
 	/**
-     * Checks if the file is a valid SubRip file
-     * @param string $_filename The path to the file
-     * @return boolean
+         * Checks if the file is a valid SubRip file
+         * @param string $_filename The path to the file
+         * @return boolean
 	 */
 	
 	public static function isValid($_filename){
