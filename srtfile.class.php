@@ -352,7 +352,7 @@ class srtFile{
 	 * Pattern used for the parsing regex
 	 */
 	const pattern = '#[0-9]+(?:\r\n|\r|\n)([0-9]{2}:[0-9]{2}:[0-9]{2}(?:,|\.)[0-9]{3}) --> ([0-9]{2}:[0-9]{2}:[0-9]{2}(?:,|\.)[0-9]{3})(?:\r\n|\r|\n)((?:.*(?:\r\n|\r|\n))*?)(?:\r\n|\r|\n)#';
-    
+	
 	/**
 	 * Default encoding if unable to detect
 	 */
@@ -389,8 +389,8 @@ class srtFile{
 	/**
 	 * File has BOM or not 
 	 *
-         * @var boolean
-         */
+	 * @var boolean
+	 */
 	private $has_BOM = false;
 
 	/**
@@ -470,9 +470,9 @@ class srtFile{
 	}
 	
 	/**
-         * Checks if the file is a valid SubRip file
-         * @param string $_filename The path to the file
-         * @return boolean
+	 * Checks if the file is a valid SubRip file
+	 * @param string $_filename The path to the file
+	 * @return boolean
 	 */
 	
 	public static function isValid($_filename){
@@ -482,9 +482,9 @@ class srtFile{
 	}
 
 	/**
-     * Converts Windows-1252 (CP-1252) to UTF-8
-     * @param string $text The string to be converted
-     */
+	 * Converts Windows-1252 (CP-1252) to UTF-8
+	 * @param string $text The string to be converted
+	 */
 	public static function cp1252_to_utf8($text) {
 		$buffer = $text;
 		$cp1252 = array(
@@ -542,7 +542,7 @@ class srtFile{
 	}
 
 	/**
-     * Converts file content to UTF-8
+	 * Converts file content to UTF-8
 	 */
 	private function convertEncoding(){
 		$exec = array();
@@ -617,14 +617,23 @@ class srtFile{
 	 *
 	 * @param string $word
 	 * @param boolean $case_sensitive
+	 * @param boolean $strict
 	 * @return array containing ids of entries
 	 */
-	public function searchWord($word, $case_sensitive = false){
+	public function searchWord($word, $case_sensitive = false, $strict = false){
 		$list = array();
-		$pattern = '#'.preg_quote($word,'#').'#';
+		$pattern = preg_quote($word,'#');
+
+		$pattern = str_replace(' ', '( |\r\n|\r|\n)', $pattern);
+
+		if($strict)
+			$pattern = '($| |\r\n|\r|\n|\?|\!|\.|,	)'.$pattern.'(^| |\r\n|\r|\n|\?|\!|\.|,)';
+
+		$pattern = '#'.$pattern.'#';
+
 		if(!$case_sensitive)
 			$pattern .= 'i';
-			
+		
 		$keys = array_keys($this->subs);
 		$sub_count = sizeof($keys);
 		$i = 0;
@@ -635,6 +644,24 @@ class srtFile{
 		}
 
 		return (count($list) > 0)?$list:-1;
+	}
+
+	public function searchCueFromTimecode($_start){
+		$start = srtFileEntry::tc2ms($_start);
+
+		$prev_stop = 0;
+		$res = false;
+		$i = 0;
+		foreach($this->subs as $sub){
+			if(($start > $prev_stop && $start < $sub->getStart()) || ($start >= $sub->getStart() && $start < $sub->getStop())){
+				$res = $sub;
+				break;
+			}
+			$prev_stop = $sub->getStop();
+			$i++;
+		}
+
+		return $i;
 	}
 
 	/**
@@ -840,16 +867,16 @@ class srtFile{
 			$tmp .= '</statistics>';
 		}
 		elseif($output == 'html'){
-			$tmp = '<ul style="padding-left:0;margin:1px;padding:2px;">';
-			$tmp .= '<li style="background-color:#9999FF">TOO SLOW = '.$this->stats['tooSlow'].' ('.$this->getPercent($this->stats['tooSlow']).'%)</li>';
-			$tmp .= '<li style="background-color:#99CCFF">Slow, acceptable = '.$this->stats['slowAcceptable'].' ('.$this->getPercent($this->stats['slowAcceptable']).'%)</li>';
-			$tmp .= '<li style="background-color:#99FFFF">A bit slow = '.$this->stats['aBitSlow'].' ('.$this->getPercent($this->stats['aBitSlow']).'%)</li>';
-			$tmp .= '<li style="background-color:#99FFCC">Good = '.$this->stats['goodSlow'].' ('.$this->getPercent($this->stats['goodSlow']).'%)</li>';
-			$tmp .= '<li style="background-color:#99FF99">Perfect = '.$this->stats['perfect'].' ('.$this->getPercent($this->stats['perfect']).'%)</li>';
-			$tmp .= '<li style="background-color:#CCFF99">Good = '.$this->stats['goodFast'].' ('.$this->getPercent($this->stats['goodFast']).'%)</li>';
-			$tmp .= '<li style="background-color:#FFFF99">A bit fast = '.$this->stats['aBitFast'].' ('.$this->getPercent($this->stats['aBitFast']).'%)</li>';
-			$tmp .= '<li style="background-color:#FFCC99">Fast, acceptable = '.$this->stats['fastAcceptable'].' ('.$this->getPercent($this->stats['fastAcceptable']).'%)</li>';
-			$tmp .= '<li style="background-color:#FF9999">TOO FAST = '.$this->stats['tooFast'].' ('.$this->getPercent($this->stats['tooFast']).'%)</li>';
+			$tmp = '<ul class="srt_stats">';
+			$tmp .= '<li style="background-color:#9999FF">TOO SLOW = <span style="float:right;">'.$this->stats['tooSlow'].' ('.$this->getPercent($this->stats['tooSlow']).'%)</span></li>';
+			$tmp .= '<li style="background-color:#99CCFF">Slow, acceptable = <span style="float:right;">'.$this->stats['slowAcceptable'].' ('.$this->getPercent($this->stats['slowAcceptable']).'%)</span></li>';
+			$tmp .= '<li style="background-color:#99FFFF">A bit slow = <span style="float:right;">'.$this->stats['aBitSlow'].' ('.$this->getPercent($this->stats['aBitSlow']).'%)</span></li>';
+			$tmp .= '<li style="background-color:#99FFCC">Good = <span style="float:right;">'.$this->stats['goodSlow'].' ('.$this->getPercent($this->stats['goodSlow']).'%)</span></li>';
+			$tmp .= '<li style="background-color:#99FF99">Perfect = <span style="float:right;">'.$this->stats['perfect'].' ('.$this->getPercent($this->stats['perfect']).'%)</span></li>';
+			$tmp .= '<li style="background-color:#CCFF99">Good = <span style="float:right;">'.$this->stats['goodFast'].' ('.$this->getPercent($this->stats['goodFast']).'%)</span></li>';
+			$tmp .= '<li style="background-color:#FFFF99">A bit fast = <span style="float:right;">'.$this->stats['aBitFast'].' ('.$this->getPercent($this->stats['aBitFast']).'%)</span></li>';
+			$tmp .= '<li style="background-color:#FFCC99">Fast, acceptable = <span style="float:right;">'.$this->stats['fastAcceptable'].' ('.$this->getPercent($this->stats['fastAcceptable']).'%)</span></li>';
+			$tmp .= '<li style="background-color:#FF9999">TOO FAST = <span style="float:right;">'.$this->stats['tooFast'].' ('.$this->getPercent($this->stats['tooFast']).'%)</span></li>';
 			$tmp .= '</ul>';
 		}
 
