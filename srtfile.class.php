@@ -531,7 +531,7 @@ class srtFile{
 	public static function detect_utf_encoding($text) {
 		$first2 = substr($text, 0, 2);
 		$first3 = substr($text, 0, 3);
-		$first4 = substr($text, 0, 3);
+		$first4 = substr($text, 0, 4);
 
 		if ($first3 == UTF8_BOM) return 'UTF-8';
 		elseif ($first4 == UTF32_BIG_ENDIAN_BOM) return 'UTF-32BE';
