@@ -1,7 +1,36 @@
-SubRip File PHP Parser
+# SubRip File PHP Parser
 Julien Villetorte, 2010 (gdelphiki@gmail.com)
 
-Example:
+## Installation with [composer](http://getcomposer.org/):
+
+add this to your composer.json file:
+``` json
+"require": 
+{
+        "delphiki/subrip-file-parser": "dev-master"
+},
+"repositories": 
+[
+	{
+            "type": "vcs",
+            "url" : "https://github.com/delphiki/SubRip-File-Parser.git"
+	}
+]
+
+```
+
+run 
+
+``` sh
+
+php composer update
+
+```
+
+## Usage:
+
+``` php
+<?php 
 
 try{
 	$file = new srtFile('./subtitles.srt');
@@ -19,3 +48,4 @@ try{
 catch(Exception $e){
 	echo 'Error: '.$e->getMessage()."\n";
 }
+```
