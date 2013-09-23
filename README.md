@@ -7,7 +7,7 @@ add this to your composer.json file:
 ``` json
 "require": 
 {
-        "delphiki/subrip-file-parser": "dev-master"
+        "delphiki/subrip-file-parser": "1.*"
 }
 
 ```
