@@ -9,15 +9,12 @@ add this to your composer.json file:
 {
         "delphiki/subrip-file-parser": "1.*"
 }
-
 ```
 
 run 
 
 ``` sh
-
 php composer update
-
 ```
 
 ## Usage:
@@ -25,8 +22,10 @@ php composer update
 ``` php
 <?php 
 
+require('src/SrtParser/srtFile.php');
+
 try{
-	$file = new srtFile('./subtitles.srt');
+	$file = new \SrtParser\srtFile('./subtitles.srt');
 
 	// display the text of the first entry
 	echo $file->getSub(0)->getText();
