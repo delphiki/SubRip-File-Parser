@@ -8,14 +8,7 @@ add this to your composer.json file:
 "require": 
 {
         "delphiki/subrip-file-parser": "dev-master"
-},
-"repositories": 
-[
-	{
-            "type": "vcs",
-            "url" : "https://github.com/delphiki/SubRip-File-Parser.git"
-	}
-]
+}
 
 ```
 

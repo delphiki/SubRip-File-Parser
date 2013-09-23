@@ -246,6 +246,7 @@ class srtFile{
 			case 'windows-1252':
 			case 'iso-8859-1':
 			case 'iso-8859-15':
+			case 'us-ascii':
 				$this->encoding = self::default_encoding;
 				$this->file_content = self::cp1252_to_utf8($this->file_content);
 			break;
