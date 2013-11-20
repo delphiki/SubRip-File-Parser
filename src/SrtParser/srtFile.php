@@ -357,6 +357,7 @@ class srtFile{
 	 */
 	public function mergeSrtFile($_srtFile){
 		if(!$_srtFile instanceof srtFile)
+			throw new \Exception('srtFile object parameter exepected.');
 		$this->subs = array_merge($this->subs, $_srtFile->getSubs());
 		
 		$this->sortSubs();
