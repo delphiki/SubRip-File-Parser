@@ -341,4 +341,27 @@ class srtFileEntry{
 
 		$this->readingSpeed = ($this->strlen() * 1000) / ($this->durationMS-500);
 	}
+        
+        /**
+         * Set a delay (positive or negative)
+         *
+         * @param int $ms Delay in milliseconds
+         */
+        
+        private function setDelay($ms = 0){
+
+            if (!is_numeric($ms)) return false;
+            if (!$ms) return true; //null
+
+            $start = $this->getStart();
+            $stop = $this->getStop();
+
+            $this->setStart($start + $ms);
+            $this->setStop($stop + $ms);
+            
+            return true;
+
+        }
+        
+        
 }

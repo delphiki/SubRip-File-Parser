@@ -418,6 +418,25 @@ class srtFile{
 			$this->subs[$keys[$i]]->setStop($new_stop);
 		}
 	}
+        
+        /**
+         * Set a delay (positive or negative) for all subtitles entries
+         *
+         * @param int $ms Delay in milliseconds
+         */
+
+        public function setDelay($ms = 0){
+
+            if (!is_numeric($ms)) return false;
+            if (!$ms) return true; //null
+
+            $keys = array_keys($this->subs);
+            $sub_count = sizeof($keys);
+            for($i=0; $i < $sub_count; $i++){
+                $this->subs[$keys[$i]]->setDelay($ms);
+            }
+
+        }
 
 	/**
 	 * Builds file content (file_content[_notag])
