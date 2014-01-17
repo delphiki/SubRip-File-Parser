@@ -454,10 +454,10 @@ class srtFile{
 	/**
          * Auto syncs a range of subtitles given their first and last correct times.
          * The subtitles are first shifted to the first subtitle's correct time, and then proportionally 
+         * adjusted using the last subtitle's correct time.
          * 
          * Based on gnome-subtitles (https://git.gnome.org/browse/gnome-subtitles/)
          * 
-         * adjusted using the last subtitle's correct time.
          * @param $startIndex">The subtitle index to start the adjustment with.
          * @param $startTime">The correct start time for the first subtitle.
          * @param $endIndex">The subtitle index to end the adjustment with.
