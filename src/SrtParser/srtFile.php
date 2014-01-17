@@ -458,12 +458,12 @@ class srtFile{
          * 
          * Based on gnome-subtitles (https://git.gnome.org/browse/gnome-subtitles/)
          * 
-         * @param $startIndex">The subtitle index to start the adjustment with.
-         * @param $startTime">The correct start time for the first subtitle.
-         * @param $endIndex">The subtitle index to end the adjustment with.
-         * @param $endTime">The correct start time for the last subtitle.
-         * @param $syncLast">Whether to sync the last subtitle.
-         * @return Whether the subtitles could be adjusted
+         * @param int $startIndex The subtitle index to start the adjustment with.
+         * @param int $startTime The correct start time for the first subtitle.
+         * @param int $endIndex The subtitle index to end the adjustment with.
+         * @param int $endTime The correct start time for the last subtitle.
+         * @param bool $syncLast Whether to sync the last subtitle.
+         * @return bool Whether the subtitles could be adjusted
         */
         
         public function sync($startIndex,$startTime,$endIndex,$endTime,$syncLast = true) {
