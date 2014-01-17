@@ -342,26 +342,38 @@ class srtFileEntry{
 		$this->readingSpeed = ($this->strlen() * 1000) / ($this->durationMS-500);
 	}
         
+        public function scale($baseTime,$factor = 1){
+            
+            if ($factor==1) return;
+            
+            $new_start = $baseTime + (($this->getStart() - $baseTime) * $factor);
+            $new_stop = $baseTime + (($this->getStop() - $baseTime) * $factor);
+
+            $this->setStart(round($new_start));
+            $this->setStop(round($new_stop));
+            
+            return true;
+	}
+        
         /**
          * Set a delay (positive or negative)
          *
          * @param int $ms Delay in milliseconds
          */
         
-        private function setDelay($ms = 0){
+        public function shift($time = 0){
 
-            if (!is_numeric($ms)) return false;
-            if (!$ms) return true; //null
+            if (!is_numeric($time)) return false;
+            if ($time==0) return true;
 
             $start = $this->getStart();
             $stop = $this->getStop();
 
-            $this->setStart($start + $ms);
-            $this->setStop($stop + $ms);
+            $this->setStart(round($start + $time));
+            $this->setStop(round($stop + $time));
             
             return true;
 
         }
-        
-        
 }
+        
