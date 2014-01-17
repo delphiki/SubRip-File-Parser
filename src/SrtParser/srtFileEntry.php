@@ -218,7 +218,7 @@ class srtFileEntry{
 	 * @param int $_start
 	 */
 	public function setStart($_start){
-		$this->start = $_start;
+		$this->start = round($_start);
 		$this->startTC = self::ms2tc($_start);
 	}
 
@@ -228,7 +228,7 @@ class srtFileEntry{
 	 * @param int $_stop
 	 */
 	public function setStop($_stop){
-		$this->stop = $_stop;
+		$this->stop = round($_stop);
 		$this->stopTC = self::ms2tc($_stop);
 	}
 
@@ -349,8 +349,8 @@ class srtFileEntry{
             $new_start = $baseTime + (($this->getStart() - $baseTime) * $factor);
             $new_stop = $baseTime + (($this->getStop() - $baseTime) * $factor);
 
-            $this->setStart(round($new_start));
-            $this->setStop(round($new_stop));
+            $this->setStart($new_start);
+            $this->setStop($new_stop);
             
             return true;
 	}
@@ -369,8 +369,8 @@ class srtFileEntry{
             $start = $this->getStart();
             $stop = $this->getStop();
 
-            $this->setStart(round($start + $time));
-            $this->setStop(round($stop + $time));
+            $this->setStart($start + $time);
+            $this->setStop($stop + $time);
             
             return true;
 

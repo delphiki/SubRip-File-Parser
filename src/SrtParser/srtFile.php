@@ -411,8 +411,8 @@ class srtFile{
 			$old_start = $this->subs[$keys[$i]]->getStart();
 			$old_stop = $this->subs[$keys[$i]]->getStop();
 
-			$new_start = round($old_start * ($new_fps / $old_fps));
-			$new_stop = round($old_stop * ($new_fps / $old_fps));
+			$new_start = $old_start * ($new_fps / $old_fps);
+			$new_stop = $old_stop * ($new_fps / $old_fps);
 
 			$this->subs[$keys[$i]]->setStart($new_start);
 			$this->subs[$keys[$i]]->setStop($new_stop);
