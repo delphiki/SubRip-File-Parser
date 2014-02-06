@@ -411,13 +411,96 @@ class srtFile{
 			$old_start = $this->subs[$keys[$i]]->getStart();
 			$old_stop = $this->subs[$keys[$i]]->getStop();
 
-			$new_start = round($old_start * ($new_fps / $old_fps));
-			$new_stop = round($old_stop * ($new_fps / $old_fps));
+			$new_start = $old_start * ($new_fps / $old_fps);
+			$new_stop = $old_stop * ($new_fps / $old_fps);
 
 			$this->subs[$keys[$i]]->setStart($new_start);
 			$this->subs[$keys[$i]]->setStop($new_stop);
 		}
 	}
+        
+        /**
+        * Shifts a range of subtitles a specified amount of time.
+        * @param $time The time to use (ms), which can be positive or negative.
+        * @param int $startIndex The subtitle index the range begins with.
+        * @param int $endIndex The subtitle index the range ends with.
+        * 
+        */
+	public function shift($time, $startIndex = false, $endIndex = false) {
+            
+            if (!is_numeric($time)) return false;
+            if ($time==0) return true;
+
+            $keys = array_keys($this->subs);
+            $sub_count = sizeof($keys);
+            
+            if (!$startIndex) $startIndex = 0;
+            if (!$endIndex) $endIndex = $sub_count - 1;
+            
+            $startSubtitle = $this->getSub($startIndex);
+            $endSubtitle = $this->getSub($endIndex);
+            
+            //check subtitles do exist
+            if (!$startSubtitle || !$endSubtitle) return false;
+            
+            for($i=$startIndex; $i < $endIndex; $i++){
+                    $subtitle = $this->getSub($i);
+                    $subtitle->shift($time);
+            }
+            
+            return true;
+	}
+        
+	/**
+         * Auto syncs a range of subtitles given their first and last correct times.
+         * The subtitles are first shifted to the first subtitle's correct time, and then proportionally 
+         * adjusted using the last subtitle's correct time.
+         * 
+         * Based on gnome-subtitles (https://git.gnome.org/browse/gnome-subtitles/)
+         * 
+         * @param int $startIndex The subtitle index to start the adjustment with.
+         * @param int $startTime The correct start time for the first subtitle.
+         * @param int $endIndex The subtitle index to end the adjustment with.
+         * @param int $endTime The correct start time for the last subtitle.
+         * @param bool $syncLast Whether to sync the last subtitle.
+         * @return bool Whether the subtitles could be adjusted
+        */
+        
+        public function sync($startIndex,$startTime,$endIndex,$endTime,$syncLast = true) {
+
+                $keys = array_keys($this->subs);
+                $sub_count = sizeof($keys);
+            
+                //set first and last subtitles index
+                if (!$startIndex) $startIndex = 0;
+                if (!$endIndex) $endIndex = $sub_count - 1;
+            
+                //check subtitles do exist
+                $startSubtitle = $this->getSub($startIndex);
+                $endSubtitle = $this->getSub($endIndex);
+                if (!$startSubtitle || !$endSubtitle) return false;
+                
+                if (!($startTime < $endTime)) return false;
+		
+		$shift = $startTime - $startSubtitle->getStart();
+		$factor = ($endTime - $startTime) / ($endSubtitle->getStart() - $startSubtitle->getStart());
+
+		/* Shift subtitles to the start point */
+		if ($shift) {
+                        $this->shift($shift,$startIndex,$endIndex);
+		}
+
+		/* Sync timings with proportion */
+		for ($index=$startIndex; $index <= $endIndex ; $index++) {
+			$entry = $this->getSub($index);
+			$entry->scale($startTime,$factor);
+		}
+                
+		return true;
+	}
+
+        
+
 
 	/**
 	 * Builds file content (file_content[_notag])
