@@ -231,7 +231,7 @@ class srtFile{
 	 */
 	private function convertEncoding(){
 		$exec = array();
-		exec('file -i '.$this->filename, $exec);
+		exec('file -i "'.$this->filename.'"', $exec);
 		$res_exec = explode('=', $exec[0]);
 
 
