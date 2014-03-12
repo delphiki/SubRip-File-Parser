@@ -1,3 +1,6 @@
+This repository is no longer maintained. The project moved to [captioning/captioning](https://github.com/captioning/captioning)
+===============================================================================================================================
+
 # SubRip File PHP Parser
 Julien Villetorte, 2010 (gdelphiki@gmail.com)
 
